@@ -1,10 +1,10 @@
 class Mundipagg
-  attr_reader :errors
+  attr_reader :validation_errors, :transaction, :error_message, :last_response, :masked_number, :instant_buy_key
 
   def initialize(options = {})
     @merchant_key = options[:merchant_key] || ENV['MUNDIPAGG_MERCHANT_KEY']
     @environment = options[:environment] || ENV['RACK_ENV'] || 'test'
-    @errors = []
+    @validation_errors = []
   end
 
   def client
@@ -25,6 +25,25 @@ class Mundipagg
       encoding: 'UTF-8',
     )
   end
+
+  def approve(params)
+    if @approve_response = create_order(params)
+      @last_response = @approve_response
+      @masked_number = @approve_response[:credit_card_transaction_result_collection][:credit_card_transaction_result][:credit_card_number]
+      @transaction = @approve_response[:order_key]
+      @instant_buy_key = @approve_response[:credit_card_transaction_result_collection][:credit_card_transaction_result][:instant_buy_key]
+      @error_message = approved? ? nil : @approve_response[:error_report].inspect
+      return approved?
+    else
+      return false
+    end
+  end
+
+  def approved?
+    raise "Call this method after approve" if @approve_response.nil?
+    @approve_response[:credit_card_transaction_result_collection][:credit_card_transaction_result][:success] == true
+  end
+
 
   def create_order(params = {})
     raise "MerchantKey not configured. Set the environment variable MUNDIPAGG_MERCHANT_KEY or pass on initialization, ex: MundiPagg.new(merchant_key: 'key')." if @merchant_key.nil?
@@ -49,7 +68,7 @@ class Mundipagg
         validates_inclusion_of 'CreditCardBrandEnum', in: %w( Visa Mastercard Hipercard Amex Diners Elo )
       end
     end
-    return false unless @errors.empty?
+    return false unless @validation_errors.empty?
     message = "<ns2:createOrderRequest>#{Gyoku.xml(params, {
       :element_form_default => :qualified,
       :namespace            => :ns1,
@@ -58,8 +77,8 @@ class Mundipagg
     response = client.call(:create_order, soap_action: "http://tempuri.org/MundiPaggService/CreateOrder", message: message)
     response.hash[:envelope][:body][:create_order_response][:create_order_result]
   end
-  
-  protected  
+
+  protected
     def using (params)
       @params = params
       yield
@@ -68,7 +87,7 @@ class Mundipagg
     def validates_presence_of(field)
       value = @params[field]
       if value.nil?
-        @errors << {
+        @validation_errors << {
           :field => field.to_sym,
           :message => :blank,
         }
@@ -84,7 +103,7 @@ class Mundipagg
       option_value = range_options[option]
 
       unless !value.nil? and value.size.method(validity_checks[option])[option_value]
-        @errors << {
+        @validation_errors << {
           :field => field,
           :message => {:is => :wrong_length, :minimum => :too_short, :maximum => :too_long}[option],
         }
@@ -97,7 +116,7 @@ class Mundipagg
 
       if configuration[:only_integer]
         unless value.to_s =~ /\A[+-]?\d+\Z/
-          @errors << {
+          @validation_errors << {
             :field => field,
             :message => :not_a_number,
           }
@@ -106,7 +125,7 @@ class Mundipagg
         begin
           value = Kernel.Float(value)
         rescue ArgumentError, TypeError
-          @errors << {
+          @validation_errors << {
             :field => field,
             :message => :not_a_number,
           }
@@ -120,7 +139,7 @@ class Mundipagg
 
       enum = configuration[:in] || configuration[:within]
       unless enum.include?(value)
-        @errors << {
+        @validation_errors << {
           :field => field,
           :message => :inclusion,
         }
