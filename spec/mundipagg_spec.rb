@@ -39,27 +39,21 @@ describe Mundipagg do
     its(:service_name) { should == "MundiPaggService" }
   end
   describe :approve do
-    context "merchant key not set" do
-      before { ENV['MUNDIPAGG_MERCHANT_KEY'] = nil }
-      after { Dotenv.load }
-      it {
-        expect {
-          mp.create_order
-        }.to raise_exception(RuntimeError, "MerchantKey not configured. Set the environment variable MUNDIPAGG_MERCHANT_KEY or pass on initialization, ex: MundiPagg.new(merchant_key: 'key').")
-      }
-    end
     context "merchant key is set" do
-      let(:mp) { Mundipagg.new }
       context "without params" do
-        let!(:approve) { mp.approve({}) }
-        it { mp.approve({}).should be_false }
-        it { mp.validation_errors.should == [{:field=>:AmountInCents, :message=>:blank}] }
+        let(:approve) { mp.approve({}) }
+        it { approve.should be_false }
+        context "none" do
+          before { approve }
+          it { mp.validation_errors.should == [{:field=>:AmountInCents, :message=>:blank}] }          
+        end
       end
       context "with valid params for AuthOnly", vcr: { cassette_name: 'create-order-authonly-valid' } do
         let(:approve) {
           mp.approve(
             'AmountInCents' => '900',
             'CurrencyIsoEnum' => 'BRL',
+            'MerchantKey' => ENV['MUNDIPAGG_MERCHANT_KEY'],
             'CreditCardTransactionCollection' => {
               'CreditCardTransaction' => [{
                 'AmountInCents' => '900',
@@ -70,7 +64,7 @@ describe Mundipagg do
                 'ExpYear' => '17',
                 'HolderName' => 'Rafael Lima',
                 'InstallmentCount' => '0', # Número de parcelas da transação.
-                'PaymentMethodCode' => '2', # Enviar vazio para transações em produção e “2” para transações em homologação.
+                'PaymentMethodCode' => '1', # Enviar vazio para transações em produção e “2” para transações em homologação.
                 'SecurityCode' => '123',
               }]
             },
@@ -80,82 +74,131 @@ describe Mundipagg do
         context "none" do
           before { approve }
           it { mp.validation_errors.should be_empty }
-          it { mp.transaction.should == '3937979d-6efa-45ff-8e9d-f640c5d4a763' }
+          it { mp.transaction.should == 'b1551bae-2ede-4baa-82fc-552489b5be2a' }
           it { mp.instant_buy_key.should == '8c9616ad-ab52-43b1-b048-d83973fe4baf' }
           it { mp.masked_number.should == '123456****3456' }
-          it { mp.last_response.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>ENV['MUNDIPAGG_MERCHANT_KEY'], :mundi_pagg_time_in_milliseconds=>"839", :order_key=>"3937979d-6efa-45ff-8e9d-f640c5d4a763", :order_reference=>"TESTESERVICO", :order_status_enum=>"Opened", :request_key=>"d981f7d0-2772-4f5f-86b7-51c064760a52", :success=>true, :version=>"1.0", :credit_card_transaction_result_collection=>{:credit_card_transaction_result=>{:acquirer_message=>"Transação de simulação autorizada com sucesso", :acquirer_return_code=>"0", :amount_in_cents=>"900", :authorization_code=>"829917", :authorized_amount_in_cents=>"900", :captured_amount_in_cents=>nil, :credit_card_number=>"123456****3456", :credit_card_operation_enum=>"AuthOnly", :credit_card_transaction_status_enum=>"AuthorizedPendingCapture", :custom_status=>nil, :due_date=>nil, :external_time_in_milliseconds=>"81", :instant_buy_key=>"8c9616ad-ab52-43b1-b048-d83973fe4baf", :refunded_amount_in_cents=>nil, :success=>true, :transaction_identifier=>"34037", :transaction_key=>"a5dcfdec-6ed6-4d7e-8b79-30b1dbf44900", :transaction_reference=>"86710d6a", :unique_sequential_number=>"917669", :voided_amount_in_cents=>nil, :original_acquirer_return_collection=>nil}}, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>nil, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"}}
+          it { mp.last_response.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>"658e4472-0d3a-4e98-a6d8-e7cdd76881be", :mundi_pagg_time_in_milliseconds=>"794", :order_key=>"b1551bae-2ede-4baa-82fc-552489b5be2a", :order_reference=>"76c00f54", :order_status_enum=>"Opened", :request_key=>"15e6a28e-2ec3-4337-ad98-5a3b8bee2407", :success=>true, :version=>"1.0", :credit_card_transaction_result_collection=>{:credit_card_transaction_result=>{:acquirer_message=>"Transação de simulação autorizada com sucesso", :acquirer_return_code=>"0", :amount_in_cents=>"900", :authorization_code=>"35353", :authorized_amount_in_cents=>"900", :captured_amount_in_cents=>nil, :credit_card_number=>"123456****3456", :credit_card_operation_enum=>"AuthOnly", :credit_card_transaction_status_enum=>"AuthorizedPendingCapture", :custom_status=>nil, :due_date=>nil, :external_time_in_milliseconds=>"165", :instant_buy_key=>"8c9616ad-ab52-43b1-b048-d83973fe4baf", :refunded_amount_in_cents=>nil, :success=>true, :transaction_identifier=>"388700", :transaction_key=>"79fb5bb4-5cfe-48b5-9c8a-8f1ea1025d3e", :transaction_reference=>"eb2f703c", :unique_sequential_number=>"257", :voided_amount_in_cents=>nil, :original_acquirer_return_collection=>nil}}, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>nil, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
           it { mp.error_message.should be_nil }
         end
       end
     end
   end
-  describe :create_order do
-    context "merchant key not set" do
-      before { ENV['MUNDIPAGG_MERCHANT_KEY'] = nil }
-      after { Dotenv.load }
-      it {
-        expect {
-          mp.create_order
-        }.to raise_exception(RuntimeError, "MerchantKey not configured. Set the environment variable MUNDIPAGG_MERCHANT_KEY or pass on initialization, ex: MundiPagg.new(merchant_key: 'key').")
-      }
+  describe :confirm do
+    context "without params" do
+      let(:confirm) { mp.confirm({}) }
+      it { confirm.should be_false }
+      context "none" do
+        before { confirm }
+        it { mp.validation_errors.should == [{:field=>:OrderKey, :message=>:blank}, {:field=>:ManageOrderOperationEnum, :message=>:blank}] }
+      end
     end
-    context "merchant key is set" do
-      let(:mp) { Mundipagg.new }
-      context "without params" do
-        let!(:create_order) { mp.create_order }
-        it { create_order.should be_false }
+    context "with valid params for Capture", vcr: { cassette_name: 'manage-order-capture-valid' } do
+      let(:confirm) {
+        mp.confirm(
+          'ManageOrderOperationEnum' => 'Capture',
+          'MerchantKey' => ENV['MUNDIPAGG_MERCHANT_KEY'],
+          'OrderKey' => 'b1551bae-2ede-4baa-82fc-552489b5be2a',
+        )
+      }
+      it { confirm.should be_true }
+      context "none" do
+        before { confirm }
+        it { mp.validation_errors.should be_empty }
+        it { mp.last_response.should == {:manage_order_operation_enum=>"Capture", :mundi_pagg_time_in_milliseconds=>"137", :order_key=>"b1551bae-2ede-4baa-82fc-552489b5be2a", :order_reference=>nil, :order_status_enum=>"Paid", :request_key=>"fc42fd3c-601c-4c0f-9a4e-c0e45ae5d928", :success=>true, :version=>"1.0", :credit_card_transaction_result_collection=>{:credit_card_transaction_result=>{:acquirer_message=>"Transação de simulação capturada com sucesso", :acquirer_return_code=>"0", :amount_in_cents=>"900", :authorization_code=>"35353", :authorized_amount_in_cents=>"900", :captured_amount_in_cents=>"900", :credit_card_number=>"123456****3456", :credit_card_operation_enum=>"AuthOnly", :credit_card_transaction_status_enum=>"Captured", :custom_status=>nil, :due_date=>nil, :external_time_in_milliseconds=>"192", :instant_buy_key=>"8c9616ad-ab52-43b1-b048-d83973fe4baf", :refunded_amount_in_cents=>nil, :success=>true, :transaction_identifier=>"865865", :transaction_key=>"79fb5bb4-5cfe-48b5-9c8a-8f1ea1025d3e", :transaction_reference=>"eb2f703c", :unique_sequential_number=>"551865", :voided_amount_in_cents=>nil, :original_acquirer_return_collection=>nil}}, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>nil, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
+        it { mp.error_message.should be_nil }
+      end
+    end
+  end
+  describe :create_order do
+    context "without params" do
+      let(:create_order) { mp.create_order({}) }
+      it { create_order.should be_false }
+      context "none" do
+        before { create_order }
         it { mp.validation_errors.should == [{:field=>:AmountInCents, :message=>:blank}] }
       end
-      context "with incomplete params", vcr: { cassette_name: 'create-order-incomplete' } do
-        let(:create_order) { mp.create_order(AmountInCents: 900) }
-        it { create_order.should be_false }
+    end
+    context "with incomplete params", vcr: { cassette_name: 'create-order-incomplete' } do
+      let(:create_order) { mp.create_order(AmountInCents: 900) }
+      it { create_order.should be_false }
+    end
+    context "with valid params for AuthOnly", vcr: { cassette_name: 'create-order-authonly-valid' } do
+      let(:create_order) {
+        mp.create_order(
+          'AmountInCents' => '900',
+          'CurrencyIsoEnum' => 'BRL',
+          'MerchantKey' => ENV['MUNDIPAGG_MERCHANT_KEY'],
+          'CreditCardTransactionCollection' => {
+            'CreditCardTransaction' => [{
+              'AmountInCents' => '900',
+              'CreditCardBrandEnum' => 'Visa', # Visa, Mastercard, Hipercard, Amex, Diners, Elo
+              'CreditCardNumber' => '1234567890123456',
+              'CreditCardOperationEnum' => 'AuthOnly', #AuthOnly, AuthAndCapture, AuthAndCaptureWithDelay
+              'ExpMonth' => '10',
+              'ExpYear' => '17',
+              'HolderName' => 'Rafael Lima',
+              'InstallmentCount' => '0', # Número de parcelas da transação.
+              'PaymentMethodCode' => '1', # Enviar vazio para transações em produção e “2” para transações em homologação.
+              'SecurityCode' => '123',
+            }]
+          },
+        )
+      }
+      it { create_order.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>"658e4472-0d3a-4e98-a6d8-e7cdd76881be", :mundi_pagg_time_in_milliseconds=>"794", :order_key=>"b1551bae-2ede-4baa-82fc-552489b5be2a", :order_reference=>"76c00f54", :order_status_enum=>"Opened", :request_key=>"15e6a28e-2ec3-4337-ad98-5a3b8bee2407", :success=>true, :version=>"1.0", :credit_card_transaction_result_collection=>{:credit_card_transaction_result=>{:acquirer_message=>"Transação de simulação autorizada com sucesso", :acquirer_return_code=>"0", :amount_in_cents=>"900", :authorization_code=>"35353", :authorized_amount_in_cents=>"900", :captured_amount_in_cents=>nil, :credit_card_number=>"123456****3456", :credit_card_operation_enum=>"AuthOnly", :credit_card_transaction_status_enum=>"AuthorizedPendingCapture", :custom_status=>nil, :due_date=>nil, :external_time_in_milliseconds=>"165", :instant_buy_key=>"8c9616ad-ab52-43b1-b048-d83973fe4baf", :refunded_amount_in_cents=>nil, :success=>true, :transaction_identifier=>"388700", :transaction_key=>"79fb5bb4-5cfe-48b5-9c8a-8f1ea1025d3e", :transaction_reference=>"eb2f703c", :unique_sequential_number=>"257", :voided_amount_in_cents=>nil, :original_acquirer_return_collection=>nil}}, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>nil, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
+    end
+    context "with valid params for AuthAndCapture", vcr: { cassette_name: 'create-order-authandcapture-valid' } do
+      let(:create_order) {
+        mp.create_order(
+          'AmountInCents' => '900',
+          'CurrencyIsoEnum' => 'BRL',
+          'MerchantKey' => ENV['MUNDIPAGG_MERCHANT_KEY'],
+          'CreditCardTransactionCollection' => {
+            'CreditCardTransaction' => [{
+              'AmountInCents' => '900',
+              'CreditCardBrandEnum' => 'Visa', # Visa, Mastercard, Hipercard, Amex, Diners, Elo
+              'CreditCardNumber' => '1234567890123456',
+              'CreditCardOperationEnum' => 'AuthAndCapture', #AuthOnly, AuthAndCapture, AuthAndCaptureWithDelay
+              'ExpMonth' => '10',
+              'ExpYear' => '17',
+              'HolderName' => 'Rafael Lima',
+              'InstallmentCount' => '0', # Número de parcelas da transação.
+              'PaymentMethodCode' => '1', # Enviar vazio para transações em produção e “2” para transações em homologação.
+              'SecurityCode' => '123',
+            }]
+          },
+        )
+      }
+      it { create_order.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>"658e4472-0d3a-4e98-a6d8-e7cdd76881be", :mundi_pagg_time_in_milliseconds=>"854", :order_key=>"ee0ce803-9e41-4535-977d-2d8f0e8045fa", :order_reference=>"188c6ae1", :order_status_enum=>"Paid", :request_key=>"ba04919c-f819-41aa-be9e-f43baf7137d6", :success=>true, :version=>"1.0", :credit_card_transaction_result_collection=>{:credit_card_transaction_result=>{:acquirer_message=>"Transação de simulação autorizada com sucesso", :acquirer_return_code=>"0", :amount_in_cents=>"900", :authorization_code=>"907227", :authorized_amount_in_cents=>"900", :captured_amount_in_cents=>"900", :credit_card_number=>"123456****3456", :credit_card_operation_enum=>"AuthAndCapture", :credit_card_transaction_status_enum=>"Captured", :custom_status=>nil, :due_date=>nil, :external_time_in_milliseconds=>"149", :instant_buy_key=>"8c9616ad-ab52-43b1-b048-d83973fe4baf", :refunded_amount_in_cents=>nil, :success=>true, :transaction_identifier=>"870430", :transaction_key=>"9b8ecfa8-1208-4878-b890-a97bb269be84", :transaction_reference=>"0dfb6300", :unique_sequential_number=>"698921", :voided_amount_in_cents=>nil, :original_acquirer_return_collection=>nil}}, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>nil, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
+    end
+  end
+  describe :manage_order do
+    context "without params" do
+      let(:manage_order) { mp.manage_order({}) }
+      it { manage_order.should be_false }
+      context "none" do
+        before { manage_order }
+        it { mp.validation_errors.should == [{:field=>:OrderKey, :message=>:blank}, {:field=>:ManageOrderOperationEnum, :message=>:blank}] }
       end
-      context "with valid params for AuthOnly", vcr: { cassette_name: 'create-order-authonly-valid' } do
-        let(:create_order) {
-          mp.create_order(
-            'AmountInCents' => '900',
-            'CurrencyIsoEnum' => 'BRL',
-            'CreditCardTransactionCollection' => {
-              'CreditCardTransaction' => [{
-                'AmountInCents' => '900',
-                'CreditCardBrandEnum' => 'Visa', # Visa, Mastercard, Hipercard, Amex, Diners, Elo
-                'CreditCardNumber' => '1234567890123456',
-                'CreditCardOperationEnum' => 'AuthOnly', #AuthOnly, AuthAndCapture, AuthAndCaptureWithDelay
-                'ExpMonth' => '10',
-                'ExpYear' => '17',
-                'HolderName' => 'Rafael Lima',
-                'InstallmentCount' => '0', # Número de parcelas da transação.
-                'PaymentMethodCode' => '2', # Enviar vazio para transações em produção e “2” para transações em homologação.
-                'SecurityCode' => '123',
-              }]
-            },
-          )
-        }
-        it { create_order.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>ENV['MUNDIPAGG_MERCHANT_KEY'], :mundi_pagg_time_in_milliseconds=>"839", :order_key=>"3937979d-6efa-45ff-8e9d-f640c5d4a763", :order_reference=>"TESTESERVICO", :order_status_enum=>"Opened", :request_key=>"d981f7d0-2772-4f5f-86b7-51c064760a52", :success=>true, :version=>"1.0", :credit_card_transaction_result_collection=>{:credit_card_transaction_result=>{:acquirer_message=>"Transação de simulação autorizada com sucesso", :acquirer_return_code=>"0", :amount_in_cents=>"900", :authorization_code=>"829917", :authorized_amount_in_cents=>"900", :captured_amount_in_cents=>nil, :credit_card_number=>"123456****3456", :credit_card_operation_enum=>"AuthOnly", :credit_card_transaction_status_enum=>"AuthorizedPendingCapture", :custom_status=>nil, :due_date=>nil, :external_time_in_milliseconds=>"81", :instant_buy_key=>"8c9616ad-ab52-43b1-b048-d83973fe4baf", :refunded_amount_in_cents=>nil, :success=>true, :transaction_identifier=>"34037", :transaction_key=>"a5dcfdec-6ed6-4d7e-8b79-30b1dbf44900", :transaction_reference=>"86710d6a", :unique_sequential_number=>"917669", :voided_amount_in_cents=>nil, :original_acquirer_return_collection=>nil}}, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>nil, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
-      end
-      context "with valid params for AuthAndCapture", vcr: { cassette_name: 'create-order-authandcapture-valid' } do
-        let(:create_order) {
-          mp.create_order(
-            'AmountInCents' => '900',
-            'CurrencyIsoEnum' => 'BRL',
-            'CreditCardTransactionCollection' => {
-              'CreditCardTransaction' => [{
-                'AmountInCents' => '900',
-                'CreditCardBrandEnum' => 'Visa', # Visa, Mastercard, Hipercard, Amex, Diners, Elo
-                'CreditCardNumber' => '1234567890123456',
-                'CreditCardOperationEnum' => 'AuthAndCapture', #AuthOnly, AuthAndCapture, AuthAndCaptureWithDelay
-                'ExpMonth' => '10',
-                'ExpYear' => '17',
-                'HolderName' => 'Rafael Lima',
-                'InstallmentCount' => '0', # Número de parcelas da transação.
-                'PaymentMethodCode' => '2', # Enviar vazio para transações em produção e “2” para transações em homologação.
-                'SecurityCode' => '123',
-              }]
-            },
-          )
-        }
-        it { create_order.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>ENV['MUNDIPAGG_MERCHANT_KEY'], :mundi_pagg_time_in_milliseconds=>"5518", :order_key=>"2aaf59c9-7832-4687-a499-9d613b0bedf8", :order_reference=>"TESTESERVICO", :order_status_enum=>"Paid", :request_key=>"9935b619-f7e9-457b-b86a-c1edf5b249e9", :success=>true, :version=>"1.0", :credit_card_transaction_result_collection=>{:credit_card_transaction_result=>{:acquirer_message=>"Transação de simulação autorizada com sucesso", :acquirer_return_code=>"0", :amount_in_cents=>"900", :authorization_code=>"330366", :authorized_amount_in_cents=>"900", :captured_amount_in_cents=>"900", :credit_card_number=>"123456****3456", :credit_card_operation_enum=>"AuthAndCapture", :credit_card_transaction_status_enum=>"Captured", :custom_status=>nil, :due_date=>nil, :external_time_in_milliseconds=>"90", :instant_buy_key=>"8c9616ad-ab52-43b1-b048-d83973fe4baf", :refunded_amount_in_cents=>nil, :success=>true, :transaction_identifier=>"877791", :transaction_key=>"937f36c9-1199-4925-99e0-5d50eba5e484", :transaction_reference=>"ff8a49d1", :unique_sequential_number=>"454484", :voided_amount_in_cents=>nil, :original_acquirer_return_collection=>nil}}, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>nil, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
-      end
+    end
+    context "with invalid params", vcr: { cassette_name: 'manage-order-invalid' } do
+      let(:manage_order) {
+        mp.manage_order(
+          'ManageOrderOperationEnum' => 'Void',
+          'OrderKey' => '99999999-9999-9999-9999-999999999999',
+          'MerchantKey' => ENV['MUNDIPAGG_MERCHANT_KEY'],
+        )
+      }
+      it { manage_order.should == {:manage_order_operation_enum=>"Void", :mundi_pagg_time_in_milliseconds=>nil, :order_key=>"99999999-9999-9999-9999-999999999999", :order_reference=>nil, :order_status_enum=>"WithError", :request_key=>"485495b0-d9fa-4ff7-bbd3-1fc2d2befd46", :success=>false, :version=>"1.0", :credit_card_transaction_result_collection=>nil, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>{:category=>"RequestError", :error_item_collection=>{:error_item=>{:description=>"Chave de loja inválida: '00000000-0000-0000-0000-000000000000'", :error_code=>"400", :error_field=>"ManageOrderRequest.MerchantKey", :severity_code_enum=>"Error"}}}, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
+    end
+    context "with valid params for Capture", vcr: { cassette_name: 'manage-order-capture-valid' } do
+      let(:manage_order) {
+        mp.manage_order(
+          'ManageOrderOperationEnum' => 'Capture',
+          'MerchantKey' => ENV['MUNDIPAGG_MERCHANT_KEY'],
+          'OrderKey' => 'b1551bae-2ede-4baa-82fc-552489b5be2a',
+        )
+      }
+      it { manage_order.should == {:manage_order_operation_enum=>"Capture", :mundi_pagg_time_in_milliseconds=>"137", :order_key=>"b1551bae-2ede-4baa-82fc-552489b5be2a", :order_reference=>nil, :order_status_enum=>"Paid", :request_key=>"fc42fd3c-601c-4c0f-9a4e-c0e45ae5d928", :success=>true, :version=>"1.0", :credit_card_transaction_result_collection=>{:credit_card_transaction_result=>{:acquirer_message=>"Transação de simulação capturada com sucesso", :acquirer_return_code=>"0", :amount_in_cents=>"900", :authorization_code=>"35353", :authorized_amount_in_cents=>"900", :captured_amount_in_cents=>"900", :credit_card_number=>"123456****3456", :credit_card_operation_enum=>"AuthOnly", :credit_card_transaction_status_enum=>"Captured", :custom_status=>nil, :due_date=>nil, :external_time_in_milliseconds=>"192", :instant_buy_key=>"8c9616ad-ab52-43b1-b048-d83973fe4baf", :refunded_amount_in_cents=>nil, :success=>true, :transaction_identifier=>"865865", :transaction_key=>"79fb5bb4-5cfe-48b5-9c8a-8f1ea1025d3e", :transaction_reference=>"eb2f703c", :unique_sequential_number=>"551865", :voided_amount_in_cents=>nil, :original_acquirer_return_collection=>nil}}, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>nil, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
     end
   end
 end

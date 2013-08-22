@@ -41,12 +41,25 @@ class Mundipagg
 
   def approved?
     raise "Call this method after approve" if @approve_response.nil?
-    @approve_response[:credit_card_transaction_result_collection][:credit_card_transaction_result][:success] == true
+    @approve_response[:success] == true
   end
 
+  def confirm(params)
+    if @confirm_response = manage_order(params)
+      @last_response = @confirm_response
+      @error_message = confirmed? ? nil : @confirm_response[:error_report].inspect
+      return confirmed?
+    else
+      return false
+    end
+  end
 
-  def create_order(params = {})
-    raise "MerchantKey not configured. Set the environment variable MUNDIPAGG_MERCHANT_KEY or pass on initialization, ex: MundiPagg.new(merchant_key: 'key')." if @merchant_key.nil?
+  def confirmed?
+    raise "Call this method after confirm" if @confirm_response.nil?
+    @confirm_response[:success] == true
+  end
+
+  def create_order(params)
     using params do
       validates_presence_of 'AmountInCents'
       validates_numericality_of 'AmountInCents', :only_integer => true
@@ -76,6 +89,22 @@ class Mundipagg
     })}</ns2:createOrderRequest>"
     response = client.call(:create_order, soap_action: "http://tempuri.org/MundiPaggService/CreateOrder", message: message)
     response.hash[:envelope][:body][:create_order_response][:create_order_result]
+  end
+
+  def manage_order(params)
+    using params do
+      validates_presence_of 'OrderKey'
+      validates_presence_of 'ManageOrderOperationEnum'
+      validates_inclusion_of 'ManageOrderOperationEnum', in: %w( Undefined Capture Void )
+    end
+    return false unless @validation_errors.empty?
+    message = "<ns2:manageOrderRequest>#{Gyoku.xml(params, {
+      :element_form_default => :qualified,
+      :namespace            => :ns1,
+      :key_converter        => :none
+    })}</ns2:manageOrderRequest>"
+    response = client.call(:manage_order, soap_action: "http://tempuri.org/MundiPaggService/ManageOrder", message: message)
+    response.hash[:envelope][:body][:manage_order_response][:manage_order_result]
   end
 
   protected
