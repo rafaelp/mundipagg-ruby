@@ -29,9 +29,11 @@ class Mundipagg
   def approve(params)
     if @approve_response = create_order(params)
       @last_response = @approve_response
-      @masked_number = @approve_response[:credit_card_transaction_result_collection][:credit_card_transaction_result][:credit_card_number]
-      @transaction = @approve_response[:order_key]
-      @instant_buy_key = @approve_response[:credit_card_transaction_result_collection][:credit_card_transaction_result][:instant_buy_key]
+      if approved?
+        @transaction = @approve_response[:order_key]
+        @masked_number = @approve_response[:credit_card_transaction_result_collection][:credit_card_transaction_result][:credit_card_number]
+        @instant_buy_key = @approve_response[:credit_card_transaction_result_collection][:credit_card_transaction_result][:instant_buy_key]
+      end
       @error_message = approved? ? nil : @approve_response[:error_report].inspect
       return approved?
     else

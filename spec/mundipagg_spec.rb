@@ -81,6 +81,39 @@ describe Mundipagg do
           it { mp.error_message.should be_nil }
         end
       end
+      context "with invalid params for AuthOnly", vcr: { cassette_name: 'create-order-authonly-invalid' } do
+        let(:approve) {
+          mp.approve(
+            'AmountInCents' => '900',
+            'CurrencyIsoEnum' => 'BRL',
+            'MerchantKey' => ENV['MUNDIPAGG_MERCHANT_KEY'],
+            'CreditCardTransactionCollection' => {
+              'CreditCardTransaction' => [{
+                'AmountInCents' => '900',
+                'CreditCardBrandEnum' => 'Visa', # Visa, Mastercard, Hipercard, Amex, Diners, Elo
+                'CreditCardNumber' => '999999999',
+                'CreditCardOperationEnum' => 'AuthOnly', #AuthOnly, AuthAndCapture, AuthAndCaptureWithDelay
+                'ExpMonth' => '10',
+                'ExpYear' => '17',
+                'HolderName' => 'Rafael Lima',
+                'InstallmentCount' => '0', # Número de parcelas da transação.
+                'PaymentMethodCode' => '1', # Enviar vazio para transações em produção e “2” para transações em homologação.
+                'SecurityCode' => '123',
+              }]
+            },
+          )
+        }
+        it { approve.should be_false }
+        context "none" do
+          before { approve }
+          it { mp.validation_errors.should be_empty }
+          it { mp.transaction.should be_nil }
+          it { mp.instant_buy_key.should be_nil }
+          it { mp.masked_number.should be_nil }
+          it { mp.last_response.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>"658e4472-0d3a-4e98-a6d8-e7cdd76881be", :mundi_pagg_time_in_milliseconds=>"137", :order_key=>"00000000-0000-0000-0000-000000000000", :order_reference=>nil, :order_status_enum=>"WithError", :request_key=>"057d4ec3-f0b1-4695-b384-d68bf42849ad", :success=>false, :version=>"1.0", :credit_card_transaction_result_collection=>nil, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>{:category=>"RequestError", :error_item_collection=>{:error_item=>{:description=>"O número do cartão deve ter no mínimo 10 dígitos e no máximo 24 digitos.", :error_code=>"400", :error_field=>"CreditCardTransactionRequest.CreditCardNumber", :severity_code_enum=>"Error"}}}, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
+          it { mp.error_message.should == "{:category=>\"RequestError\", :error_item_collection=>{:error_item=>{:description=>\"O número do cartão deve ter no mínimo 10 dígitos e no máximo 24 digitos.\", :error_code=>\"400\", :error_field=>\"CreditCardTransactionRequest.CreditCardNumber\", :severity_code_enum=>\"Error\"}}}" }
+        end
+      end
     end
   end
   describe :confirm do
