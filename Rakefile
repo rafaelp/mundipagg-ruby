@@ -12,7 +12,7 @@ require 'rake'
 require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
-  gem.name = "mundipagg-ruby"
+  gem.name = "mundipagg"
   gem.summary = %Q{Ruby wrapper for MundiPagg}
   gem.description = %Q{Biblioteca Ruby para utilizacao do sistema MundiPagg}
   gem.email = "contato@rafael.adm.br"
@@ -46,7 +46,7 @@ Rake::RDocTask.new do |rdoc|
   version = File.exist?('VERSION') ? File.read('VERSION') : ""
 
   rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "mundipagg-ruby #{version}"
+  rdoc.title = "mundipagg #{version}"
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
 end

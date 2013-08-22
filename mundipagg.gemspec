@@ -4,7 +4,7 @@
 # -*- encoding: utf-8 -*-
 
 Gem::Specification.new do |s|
-  s.name = "mundipagg-ruby"
+  s.name = "mundipagg"
   s.version = "0.0.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
@@ -25,7 +25,7 @@ Gem::Specification.new do |s|
     "README.mkdn",
     "Rakefile",
     "VERSION",
-    "mundipagg-ruby.gemspec",
+    "mundipagg.gemspec",
     "lib/mundipagg-ruby.rb",
     "lib/hash_strip_values.rb",
     "spec/mundipagg-ruby_spec.rb",
