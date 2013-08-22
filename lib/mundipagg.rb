@@ -72,15 +72,17 @@ class Mundipagg
     params['CreditCardTransactionCollection']['CreditCardTransaction'] ||= []
     params['CreditCardTransactionCollection']['CreditCardTransaction'].each_with_index do |credit_card_transaction, i|
       using params['CreditCardTransactionCollection']['CreditCardTransaction'][i] do
-        validates_presence_of 'CreditCardBrandEnum'
-        validates_presence_of 'CreditCardNumber'
-        validates_presence_of 'ExpMonth'
-        validates_presence_of 'ExpYear'
-        validates_presence_of 'HolderName'
         validates_presence_of 'InstallmentCount'
         validates_presence_of 'PaymentMethodCode'
-        validates_presence_of 'SecurityCode'
-        validates_inclusion_of 'CreditCardBrandEnum', in: %w( Visa Mastercard Hipercard Amex Diners Elo )
+        unless params['CreditCardTransactionCollection']['CreditCardTransaction'][i]['InstantBuyKey']
+          validates_presence_of 'CreditCardBrandEnum'
+          validates_presence_of 'CreditCardNumber'
+          validates_presence_of 'ExpMonth'
+          validates_presence_of 'ExpYear'
+          validates_presence_of 'HolderName'
+          validates_presence_of 'SecurityCode'
+          validates_inclusion_of 'CreditCardBrandEnum', in: %w( Visa Mastercard Hipercard Amex Diners Elo )
+        end
       end
     end
     return false unless @validation_errors.empty?

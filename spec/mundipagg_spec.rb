@@ -45,7 +45,7 @@ describe Mundipagg do
         it { approve.should be_false }
         context "none" do
           before { approve }
-          it { mp.validation_errors.should == [{:field=>:AmountInCents, :message=>:blank}] }          
+          it { mp.validation_errors.should == [{:field=>:AmountInCents, :message=>:blank}] }
         end
       end
       context "with valid params for AuthOnly", vcr: { cassette_name: 'create-order-authonly-valid' } do
@@ -81,6 +81,35 @@ describe Mundipagg do
           it { mp.error_message.should be_nil }
         end
       end
+      context "with valid params for AuthOnly using InstantBuyKey", vcr: { cassette_name: 'create-order-authonly-instantbuy-valid' } do
+        let(:approve) {
+          mp.approve(
+            'AmountInCents' => '900',
+            'CurrencyIsoEnum' => 'BRL',
+            'MerchantKey' => ENV['MUNDIPAGG_MERCHANT_KEY'],
+            'CreditCardTransactionCollection' => {
+              'CreditCardTransaction' => [{
+                'AmountInCents' => '900',
+                'CreditCardBrandEnum' => 'Visa', # Visa, Mastercard, Hipercard, Amex, Diners, Elo
+                'CreditCardOperationEnum' => 'AuthOnly', #AuthOnly, AuthAndCapture, AuthAndCaptureWithDelay
+                'InstantBuyKey' => '8c9616ad-ab52-43b1-b048-d83973fe4baf',
+                'InstallmentCount' => '0', # Número de parcelas da transação.
+                'PaymentMethodCode' => '1', # Enviar vazio para transações em produção e “2” para transações em homologação.
+              }]
+            },
+          )
+        }
+        it { approve.should be_true }
+        context "none" do
+          before { approve }
+          it { mp.validation_errors.should be_empty }
+          it { mp.transaction.should == '2ddfe87e-c418-4bdf-8e9a-1a7cce76dcee' }
+          it { mp.instant_buy_key.should == '8c9616ad-ab52-43b1-b048-d83973fe4baf' }
+          it { mp.masked_number.should == '123456****3456' }
+          it { mp.last_response.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>"658e4472-0d3a-4e98-a6d8-e7cdd76881be", :mundi_pagg_time_in_milliseconds=>"773", :order_key=>"2ddfe87e-c418-4bdf-8e9a-1a7cce76dcee", :order_reference=>"109c0a18", :order_status_enum=>"Opened", :request_key=>"23fee4d6-e7b9-4f2f-81e4-15b964efca3c", :success=>true, :version=>"1.0", :credit_card_transaction_result_collection=>{:credit_card_transaction_result=>{:acquirer_message=>"Transação de simulação autorizada com sucesso", :acquirer_return_code=>"0", :amount_in_cents=>"900", :authorization_code=>"615290", :authorized_amount_in_cents=>"900", :captured_amount_in_cents=>nil, :credit_card_number=>"123456****3456", :credit_card_operation_enum=>"AuthOnly", :credit_card_transaction_status_enum=>"AuthorizedPendingCapture", :custom_status=>nil, :due_date=>nil, :external_time_in_milliseconds=>"99", :instant_buy_key=>"8c9616ad-ab52-43b1-b048-d83973fe4baf", :refunded_amount_in_cents=>nil, :success=>true, :transaction_identifier=>"525553", :transaction_key=>"d6c84925-11fe-459d-ba39-550b9cfeb9dc", :transaction_reference=>"f5754e03", :unique_sequential_number=>"861943", :voided_amount_in_cents=>nil, :original_acquirer_return_collection=>nil}}, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>nil, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
+          it { mp.error_message.should be_nil }
+        end
+      end
       context "with invalid params for AuthOnly", vcr: { cassette_name: 'create-order-authonly-invalid' } do
         let(:approve) {
           mp.approve(
@@ -112,6 +141,34 @@ describe Mundipagg do
           it { mp.masked_number.should be_nil }
           it { mp.last_response.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>"658e4472-0d3a-4e98-a6d8-e7cdd76881be", :mundi_pagg_time_in_milliseconds=>"137", :order_key=>"00000000-0000-0000-0000-000000000000", :order_reference=>nil, :order_status_enum=>"WithError", :request_key=>"057d4ec3-f0b1-4695-b384-d68bf42849ad", :success=>false, :version=>"1.0", :credit_card_transaction_result_collection=>nil, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>{:category=>"RequestError", :error_item_collection=>{:error_item=>{:description=>"O número do cartão deve ter no mínimo 10 dígitos e no máximo 24 digitos.", :error_code=>"400", :error_field=>"CreditCardTransactionRequest.CreditCardNumber", :severity_code_enum=>"Error"}}}, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
           it { mp.error_message.should == "{:category=>\"RequestError\", :error_item_collection=>{:error_item=>{:description=>\"O número do cartão deve ter no mínimo 10 dígitos e no máximo 24 digitos.\", :error_code=>\"400\", :error_field=>\"CreditCardTransactionRequest.CreditCardNumber\", :severity_code_enum=>\"Error\"}}}" }
+        end
+      end
+      context "with invalid params for AuthOnly using InstanBuyKey", vcr: { cassette_name: 'create-order-authonly-instantbuy-invalid' } do
+        let(:approve) {
+          mp.approve(
+            'AmountInCents' => '900',
+            'CurrencyIsoEnum' => 'BRL',
+            'MerchantKey' => ENV['MUNDIPAGG_MERCHANT_KEY'],
+            'CreditCardTransactionCollection' => {
+              'CreditCardTransaction' => [{
+                'AmountInCents' => '900',
+                'CreditCardBrandEnum' => 'Visa', # Visa, Mastercard, Hipercard, Amex, Diners, Elo
+                'InstantBuyKey' => '99999999-9999-9999-9999-999999999999',
+                'InstallmentCount' => '0', # Número de parcelas da transação.
+                'PaymentMethodCode' => '1', # Enviar vazio para transações em produção e “2” para transações em homologação.
+              }]
+            },
+          )
+        }
+        it { approve.should be_false }
+        context "none" do
+          before { approve }
+          it { mp.validation_errors.should be_empty }
+          it { mp.transaction.should be_nil }
+          it { mp.instant_buy_key.should be_nil }
+          it { mp.masked_number.should be_nil }
+          it { mp.last_response.should == {:buyer_key=>"00000000-0000-0000-0000-000000000000", :merchant_key=>"658e4472-0d3a-4e98-a6d8-e7cdd76881be", :mundi_pagg_time_in_milliseconds=>"136", :order_key=>"00000000-0000-0000-0000-000000000000", :order_reference=>nil, :order_status_enum=>"WithError", :request_key=>"2ddfeff7-13be-4360-87b0-c62b6fefc614", :success=>false, :version=>"1.0", :credit_card_transaction_result_collection=>nil, :boleto_transaction_result_collection=>nil, :mundi_pagg_suggestion=>nil, :error_report=>{:category=>"RequestError", :error_item_collection=>{:error_item=>{:description=>"A chave de compra não é válida.", :error_code=>"400", :error_field=>"CreditCardTransactionRequest.InstantBuyKey", :severity_code_enum=>"Error"}}}, :"@xmlns:a"=>"http://schemas.datacontract.org/2004/07/MundiPagg.One.Service.DataContracts", :"@xmlns:i"=>"http://www.w3.org/2001/XMLSchema-instance"} }
+          it { mp.error_message.should == "{:category=>\"RequestError\", :error_item_collection=>{:error_item=>{:description=>\"A chave de compra não é válida.\", :error_code=>\"400\", :error_field=>\"CreditCardTransactionRequest.InstantBuyKey\", :severity_code_enum=>\"Error\"}}}" }
         end
       end
     end
