@@ -3,7 +3,7 @@ $LOAD_PATH.unshift(File.dirname(__FILE__))
 require 'rspec'
 require 'rspec/mocks'
 require 'pry'
-require 'mundipagg-ruby'
+require 'mundipagg'
 require 'dotenv'
 Dotenv.load
 

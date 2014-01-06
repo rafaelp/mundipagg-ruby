@@ -18,13 +18,10 @@ Jeweler::Tasks.new do |gem|
   gem.email = "contato@rafael.adm.br"
   gem.homepage = "http://github.com/rafaelp/mundipagg-ruby"
   gem.authors = ["Rafael Lima"]
-  gem.add_development_dependency "rspec", ">= 1.2.9"
-  gem.add_development_dependency "fakeweb", ">= 1.2.8"
-  gem.add_dependency('xml-simple', '>= 1.1.1')
   # Include your dependencies below. Runtime dependencies are required when using your gem,
   # and development dependencies are only needed for development (ie running rake tasks, tests, etc)
-  #  gem.add_runtime_dependency 'jabber4r', '> 0.1'
   #  gem.add_development_dependency 'rspec', '> 1.2.3'
+  gem.files = Dir.glob('*') + Dir.glob('lib/**/*.rb')
 end
 Jeweler::RubygemsDotOrgTasks.new
 

@@ -1,3 +1,5 @@
+require 'savon'
+
 class Mundipagg
   attr_reader :validation_errors, :transaction, :error_message, :last_response, :masked_number, :instant_buy_key
 
