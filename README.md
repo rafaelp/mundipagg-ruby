@@ -1,10 +1,10 @@
 # mundipagg-ruby
 
-Ruby Wrapper for MundiPagg
+Ruby Wrapper for [MundiPagg](http://www.mundipagg.com.br)
 
 ## INSTALATION
 
-	gem install mundipagg-ruby
+	gem install mundipagg
 
 ## LICENSE
 
@@ -14,11 +14,9 @@ mundipagg-ruby is released under the MIT License.
 
 ### **Rafael Lima**
 
-Working at [BielSystems](http://bielsystems.com.br)
+Working at [Cobre Grátis](http://cobregratis.com.br)
 
-Blog: [http://rafael.adm.br](http://rafael.adm.br)
-
-Podcast: [http://rafael.adm.br/voltandopracasa](http://rafael.adm.br/voltandopracasa)
+Site: [http://rafael.adm.br](http://rafael.adm.br)
 
 Github: [http://github.com/rafaelp](http://github.com/rafaelp)
 
